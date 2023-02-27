@@ -9,8 +9,8 @@ from flask import request
 import arrow  # Replacement for datetime, based on moment.js
 import acp_times  # Brevet time calculations
 import config
-
 import logging
+from mypymongo import brevet_insert, brevet_find
 
 ###
 # Globals
@@ -21,7 +21,6 @@ CONFIG = config.configuration()
 ###
 # Pages
 ###
-
 
 @app.route("/")
 @app.route("/index")
@@ -42,6 +41,11 @@ def page_not_found(error):
 #   These return JSON, rather than rendering pages.
 #
 ###############
+
+# need two more app.route(); one for find, one for insert
+# get info same as getting km
+
+
 @app.route("/_calc_times")
 def _calc_times():
     """

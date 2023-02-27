@@ -61,10 +61,12 @@
                      <option value="1000">1000km</option>
                   </select>
                </div>
-               <!-- columns 1 to 4  -->
+               <!-- columns 1 to 4  ADD NEW BUTTONS HERE ISH-->
                <div class="col-md-6">
                   <label>Begins at</label>
                   <input type="datetime-local" name="begin_date" id="begin_date" value="2021-01-01T00:00" />
+                  <button id="fetch">Update</button>
+                  <button id="insert">Submit</button>
                </div>
                <!-- columns 5 to 10 -->
             </div>
@@ -115,17 +117,22 @@
             var SCRIPT_ROOT = {{ request.script_root|tojson|safe }} ;
             var TIME_CALC_URL = SCRIPT_ROOT + "/_calc_times";
 
+            // add new app.route()
+            var FETCH_URL = SCRIPT_ROOT + "/fetch_brevet";
+            var INSERT_URL = SCRIPT_ROOT + "/insert_brevet";
+
             // Now passes User's desired start time and brevet distance
             function calc_times(control) {
               var km = control.find("input[name='km']").val();
               var open_time_field = control.find("input[name='open']");
               var close_time_field = control.find("input[name='close']");
-              // pass start time and brevet distance
+              // pass start time and brevet distance, same as in flask
               var brevet_dist = document.querySelector('#brevet_dist_km').value;
               var start_time = document.getElementById("begin_date").value;
 
+
               $.getJSON(TIME_CALC_URL, {km: km, brevet_dist: brevet_dist, start_time: start_time}).done(
-                function(data) {
+              function(data) {
                    var times = data.result;
                    console.log("Got a response: ");
                    console.log("Response.open = " + times.open);
@@ -142,34 +149,82 @@
             }
 
             $(document).ready(function(){
-             // Do the following when the page is finished loading
+               // Do the following when the page is finished loading
+               // you may do something like this
+               var data_to_send = {km: km};
+               // this way, you can edit the variable inside of a for loop
+               // define events in document.ready()
 
-                $('input[name="miles"]').change(
-                   function() {
-                       var miles = parseFloat($(this).val());
-                       var km = (1.609344 * miles).toFixed(6) ;
-                       console.log("Converted " + miles + " miles to " + km + " kilometers");
-                       var control_entry = $(this).parents(".control")
-                       var target = control_entry.find("input[name='km']");
-                       target.val( km );
-                       // Then calculate times for this entry
-                       calc_times(control_entry);
-                    });
+               $('input[name="miles"]').change(
+                  function() {
+                     var miles = parseFloat($(this).val());
+                     var km = (1.609344 * miles).toFixed(6) ;
+                     console.log("Converted " + miles + " miles to " + km + " kilometers");
+                     var control_entry = $(this).parents(".control")
+                     var target = control_entry.find("input[name='km']");
+                     target.val( km );
+                     // Then calculate times for this entry
+                     calc_times(control_entry);
+                  });
 
-                $('input[name="km"]').change(
-                   function() {
-                       var km = parseFloat($(this).val());
-                       var miles = (0.621371 * km).toFixed(6) ;
-                       console.log("Converted " + km + " km to " + miles + " miles");
-                       var control_entry = $(this).parents(".control")
-                       var target = control_entry.find("input[name='miles']");
-                       target.val( miles );
-                       // Then calculate times for this entry
-                       calc_times(control_entry);
-                    });
+               $('input[name="km"]').change(
+                  function() {
+                     var km = parseFloat($(this).val());
+                     var miles = (0.621371 * km).toFixed(6) ;
+                     console.log("Converted " + km + " km to " + miles + " miles");
+                     var control_entry = $(this).parents(".control")
+                     var target = control_entry.find("input[name='miles']");
+                     target.val( miles );
+                     // Then calculate times for this entry
+                     calc_times(control_entry);
+                  });
+
+               // this is the one to change
+               $('#fetch').submit(
+                  function() {
+                     $.getJSON(FETCH_URL, {}).done(
+                        function(data) {
+                              var times = data.result;
+                              console.log("Got a response: ");
+                              console.log("Response.open = " + times.open);
+                              // This part will automatically fill the open and close slots,
+                              // so don't worry about those.
+
+                              // going to have 20 open, 20 close, 20 km FOR LOOP
+                              // one start, one brev
+                              open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
+                              close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
+                           }
+                        ).fail(function(err){
+                        // In case you get an error...
+                        console.log("Error!");
+                        console.log(err);
+                     });
+                  });
+
+               $('#insert').submit(
+               function() {
+                  $.getJSON(INSERT_URL, {}).done(
+                     function(data) {
+                           var times = data.result;
+                           console.log("Got a response: ");
+                           console.log("Response.open = " + times.open);
+                           // This part will automatically fill the open and close slots,
+                           // so don't worry about those.
+
+                           // going to have 20 open, 20 close, 20 km FOR LOOP
+                           // one start, one brev
+                           open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
+                           close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
+                        }
+                     ).fail(function(err){
+                     // In case you get an error...
+                     console.log("Error!");
+                     console.log(err);
+                     });
+                  });
 
                });
-
          </script>
       </div>
    </body>
