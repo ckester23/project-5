@@ -65,7 +65,7 @@
                <div class="col-md-6">
                   <label>Begins at</label>
                   <input type="datetime-local" name="begin_date" id="begin_date" value="2021-01-01T00:00" />
-                  <button id="fetch">Update</button>
+                  <button id="fetch">Display</button>
                   <button id="insert">Submit</button>
                </div>
                <!-- columns 5 to 10 -->
@@ -150,10 +150,7 @@
 
             $(document).ready(function(){
                // Do the following when the page is finished loading
-               // you may do something like this
-               var data_to_send = {km: km};
-               // this way, you can edit the variable inside of a for loop
-               // define events in document.ready()
+               
 
                $('input[name="miles"]').change(
                   function() {
@@ -180,51 +177,137 @@
                   });
 
                // this is the one to change
-               $('#fetch').submit(
-                  function() {
-                     $.getJSON(FETCH_URL, {}).done(
-                        function(data) {
-                              var times = data.result;
-                              console.log("Got a response: ");
-                              console.log("Response.open = " + times.open);
-                              // This part will automatically fill the open and close slots,
-                              // so don't worry about those.
+               $('#insert').click(
+                  function(event) {
+                     event.preventDefault();
 
-                              // going to have 20 open, 20 close, 20 km FOR LOOP
-                              // one start, one brev
-                              open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
-                              close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
-                           }
-                        ).fail(function(err){
-                        // In case you get an error...
-                        console.log("Error!");
-                        console.log(err);
-                     });
-                  });
+                     console.log("Got a response: ");
+                     // This part will automatically fill the open and close slots,
+                     // so don't worry about those.
 
-               $('#insert').submit(
-               function() {
-                  $.getJSON(INSERT_URL, {}).done(
-                     function(data) {
-                           var times = data.result;
-                           console.log("Got a response: ");
-                           console.log("Response.open = " + times.open);
-                           // This part will automatically fill the open and close slots,
-                           // so don't worry about those.
-
-                           // going to have 20 open, 20 close, 20 km FOR LOOP
-                           // one start, one brev
-                           open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
-                           close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
+                     var brevet = $("select[name='brevet_dist_km']").val(); 
+                     var items = [];
+                     // going to have 20 open, 20 close, 20 km FOR LOOP
+                     // one start, one brev
+                     // Add ERROR for all empty rows
+                     $('.control').each(function() {
+                        // Find the row object
+                        var item = $(this);
+                        // In this row, find info we want
+                        var km = item.find("input[name='km']").val();
+                        var miles = item.find("input[name='miles']").val();
+                        var open = item.find("input[name='open']").val();
+                        var close = item.find("input[name='close']").val();
+                        var location = item.find("input[name='location']").val();
+         
+                        // If not empty, append to our list.
+                        if (miles) {
+                              // Construct a dictionary
+                              item_json = {
+                                 "km": km, 
+                                 "miles":miles,
+                                 "open": open,
+                                 "close": close,
+                                 "location": location
+                              }
+                              // Push to list
+                              items.push(item_json);
                         }
-                     ).fail(function(err){
-                     // In case you get an error...
-                     console.log("Error!");
-                     console.log(err);
+                     });
+                     // Construct the data we will be sending Flask
+                     var new_time_table = {
+                        "brevet": brevet, 
+                        "items": items};
+                     // Perfect! Now we have all the information that the user's entered
+                     // into the form. All we have to do is send a POST request to have
+                     // the backend store it in the database!
+                     $.ajax({
+                        // Expect JSON responses from our backend
+                        dataType: 'json', // expected output format (getJSON sets this as well)
+                        // Specify we're sending JSON as well
+                        contentType: "application/json",
+                        // Request method: POST
+                        type: 'POST',
+                        // URL: specified above
+                        url: INSERT_URL,
+                        // Important step that we didn't use to do in P4:
+                        // Convert our constructed dictionary to a JSON string!
+                        data: JSON.stringify(new_time_table),
+                        // On a successful response from flask:
+                        success: function(data) {
+                           // Check the status code we set in Flask
+                           // Recall: 1 was success, 0 was failure
+                           if (data.status == 1) {
+                                 console.log("Successfully inserted! Response: ", data);
+                                 // Clear the form rows
+                                 $('.control').each(function(index) {
+                                    var litem = $(this); // This is our row
+                                    // Clear existing values
+                                    litem.find("input[name='km']").val('');
+                                    litem.find("input[name='miles']").val('');
+                                    litem.find("input[name='open']").val('');
+                                    litem.find("input[name='close']").val('');
+                                    litem.find("input[name='location']").val('');
+                                 });
+                              }
+                           else {
+                                 console.log("Insertion failed: ", data);
+                           }
+                        },
+                        // On error
+                        error: function(err){
+                        console.log("Error: ", err); }
                      });
                   });
 
-               });
+                  $('#fetch').click(
+                     function(event) {
+                         event.preventDefault();
+                         // We use getJSON because we're sending a GET request.
+                         // getJSON is essentially running $.ajax as well, but sets the defaults for us.
+                         // So we're just using it for convenience.
+                         // Feel free to replace it with a $.ajax call like the one in #insert.
+                         $.getJSON(FETCH_URL /* Send no data */).done(
+                           function(data) {
+                              console.log(data);
+                               if (data.status == 1) {
+                                   console.log("Successfully fetched: ", data);
+                                   var brevet = $("select[name='brevet_dist_km']").val(data.result.brevet);
+                                   var items = data.result.items;
+                                   // We need to know how many items are in the fetched list.
+                                   // Because if we have more rows, we need to delete.
+                                   // If we have fewer rows, we need to add.
+                                   // Again something you won't do in project 5 because you have a fixed
+                                   // number of rows.
+                                   
+                                   // For each row in the HTML table
+                                   $('.control').each(function(index) {
+                                       var litem = $(this); // This is our row
+                                       // Clear existing values
+                                       litem.find("input[name='km']").val('');
+                                       litem.find("input[name='miles']").val('');
+                                       litem.find("input[name='open']").val('');
+                                       litem.find("input[name='close']").val('');
+                                       litem.find("input[name='location']").val('');
+
+                                       // Check if we're already done? Not necessary
+                                       litem.find("input[name='km']").val(items[index].km);
+                                       litem.find("input[name='miles']").val(items[index].miles);
+                                       litem.find("input[name='open']").val(items[index].open);
+                                       litem.find("input[name='close']").val(items[index].close);
+                                       litem.find("input[name='location']").val(items[index].location);
+                                   });
+                               }
+                               else {
+                                   console.log("Fetch failed: ", data);
+                               }
+                            }
+                          ).fail(function(err){
+                            // In case you get an error...
+                            console.log("Error: ", err);
+                          });
+                     });
+            });
          </script>
       </div>
    </body>
