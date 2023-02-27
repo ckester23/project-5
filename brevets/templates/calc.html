@@ -175,7 +175,6 @@
                      calc_times(control_entry);
                   });
 
-               // this is the one to change
                $('#insert').click(
                   function(event) {
                      event.preventDefault();
@@ -184,13 +183,14 @@
                      // This part will automatically fill the open and close slots,
                      // so don't worry about those.
 
+                     // get brevet and start values, instantiate checkpoints list
                      var brevet = document.querySelector('#brevet_dist_km').value;
                      var start  = document.getElementById("begin_date").value;
                      var checkpoints = [];
 
                      // Loop through all rows
                      $('.control').each(function() {
-                        // Find the row object
+                        // Get the row object
                         var item = $(this);
                         // In this row, get the info we want
                         var km = item.find("input[name='km']").val();
@@ -199,7 +199,7 @@
                         var close = item.find("input[name='close']").val();
                         var location = item.find("input[name='location']").val();
                         
-                        // If not empty, append to our list.
+                        // If not empty, append to our checkpoint list as a dict
                         if (km) {
                               // Push to list
                               check_values = {"km": km, "miles": miles, "open": open, "close": close, "location": location}
@@ -266,12 +266,14 @@
                            console.log(data);
                               if (data.status == 1) {
                                  console.log("Successfully fetched: ", data);
+
+                                 // Set the brevet and start values
                                  var brevet = data.result.brevet
                                  document.querySelector('#brevet_dist_km').value = brevet;
-
                                  var start = data.result.start
                                  document.getElementById("begin_date").value = start;
                                  
+                                 // grab the list of checkpoints from passed data. get the length
                                  var checkpoints = data.result.checkpoints;
                                  var num_items = checkpoints.length;
                                  // For each row in the HTML table
@@ -280,12 +282,14 @@
                                     // check if this index actually needs filled
                                     // (this prevents an HTML value error in lines 289-293)
                                     if (index < num_items) {
+                                       // clear previous values
                                        litem.find("input[name='km']").val('');
                                        litem.find("input[name='miles']").val('');
                                        litem.find("input[name='open']").val('');
                                        litem.find("input[name='close']").val('');
                                        litem.find("input[name='location']").val('');
-
+                                       
+                                       // fill in values from data (checkpoint list)
                                        litem.find("input[name='km']").val(checkpoints[index].km);
                                        litem.find("input[name='miles']").val(checkpoints[index].miles);
                                        litem.find("input[name='open']").val(checkpoints[index].open);

@@ -49,8 +49,12 @@ def page_not_found(error):
 @app.route("/insert_brevet", methods=["POST"])
 def insert_brevet():
     """
-     control times should be inserted into a MongoDB database, 
-     and the form should be cleared (reset) without refreshing the page.
+    /insert_brevet : Inserts the current table into the database
+    Returns an error message if the table is empty
+
+    Only accepts POST requests
+
+    JSON interface: gets JSON, responds with JSON
     """
     app.logger.debug("Got a JSON request: INSERT")
     try:
@@ -63,15 +67,16 @@ def insert_brevet():
         # Because input_json is a dictionary, we can do this:
         brevet = input_json["brevet"] # Should be a string
         start = input_json["start"] # Should be a formatted string
-        checkpoints = input_json["checkpoints"]  # Should be a list of km values
+        checkpoints = input_json["checkpoints"]  # Should be a list of dicts
 
-        # If the user didn't input any checkpoints, return an error message!
+        # If the user didn't input any checkpoints, return an error message
         if (checkpoints == []):
             return flask.jsonify(result={},
                         message="Oh no! Input Error", 
                         status=0, 
                         mongo_id='None')
-            
+        
+        # Other wise, call the insert function in mypymongo.py
         table_id = brevet_insert(brevet, start, checkpoints)
 
         return flask.jsonify(result={},
@@ -91,15 +96,17 @@ def insert_brevet():
 @app.route("/fetch_brevet")
 def fetch_brevet():
     """
-    /fetch : fetches the newest table from the database.
+    /fetch_brevet : fetches the newest table from the database.
 
     Accepts GET requests ONLY!
 
     JSON interface: gets JSON, responds with JSON
     """
-
     app.logger.debug("Got a JSON request: FETCH")
+
     try:
+        # don't have to worry about errors here, so we can call 
+        # the function in mypymongo.py
         brevet, start, checkpoints = brevet_find()
         return flask.jsonify(
                 result={"brevet": brevet, "start": start, "checkpoints": checkpoints}, 
@@ -132,7 +139,6 @@ def _calc_times():
     app.logger.debug("start={}".format(start_time))
     app.logger.debug("request.args: {}".format(request.args))
     
-
     # Now passes the User's desired start time and brevet distance
     open_time = acp_times.open_time(km, brevet_dist, start_time).format('YYYY-MM-DDTHH:mm')
     close_time = acp_times.close_time(km, brevet_dist, start_time).format('YYYY-MM-DDTHH:mm')
